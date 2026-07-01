@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>B2B Order Processor</title>
+<style>
+  /* ── Reset & Base ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy:    #0E2841;
+    --navy2:   #1A3A5C;
+    --green:   #196B24;
+    --green2:  #22952F;
+    --blue:    #156082;
+    --blue2:   #1A7AA8;
+    --red:     #8B1A1A;
+    --orange:  #E97132;
+    --bg:      #F4F7F4;
+    --bg2:     #EAEFEA;
+    --white:   #FFFFFF;
+    --border:  #D0D8D0;
+    --text:    #1A2A1A;
+    --muted:   #5A6A5A;
+    --success: #196B24;
+    --warn:    #C17A00;
+    --radius:  6px;
+    --shadow:  0 2px 8px rgba(0,0,0,.10);
+  }
+
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* ── Top Bar ── */
+  .topbar { background: var(--navy); color: #fff; padding: 0 20px; height: 52px; display: flex; align-items: center; gap: 12px; flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,.3); }
+  .topbar-logo { font-size: 18px; font-weight: 700; letter-spacing: -.3px; }
+  .topbar-sub { font-size: 11px; color: #90B8D8; margin-top: 1px; }
+  .topbar-spacer { flex: 1; }
+
+  /* ── Tab Nav ── */
+  .tabnav { background: var(--navy2); display: flex; padding: 0 16px; flex-shrink: 0; }
+  .tab { padding: 10px 22px; color: #90B8D8; font-size: 13px; font-weight: 600; cursor: pointer; border-bottom: 3px solid transparent; transition: all .15s; user-select: none; }
+  .tab:hover { color: #fff; }
+  .tab.active { color: #fff; border-bottom-color: var(--orange); }
+
+  /* ── Body Layout ── */
+  .panels { flex: 1; overflow: hidden; }
+  .panel { display: none; height: 100%; overflow-y: auto; padding: 20px; }
+  .panel.active { display: block; }
+
+  /* ── Cards ── */
+  .card { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; margin-bottom: 16px; box-shadow: var(--shadow); }
+  .card-title { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 12px; }
+
+  /* ── Info box ── */
+  .infobox { background: #E8F0F8; border-left: 4px solid var(--blue); border-radius: var(--radius); padding: 12px 16px; margin-bottom: 16px; font-size: 13px; color: var(--navy); line-height: 1.6; }
+  .infobox b { color: var(--blue); }
+
+  /* ── Form rows ── */
+  .form-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .form-label { font-weight: 600; font-size: 13px; min-width: 170px; color: var(--navy); }
+  .form-value { flex: 1; font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* ── Inputs ── */
+  input[type=text], input[type=date] { border: 1px solid var(--border); border-radius: var(--radius); padding: 7px 10px; font-size: 13px; font-family: inherit; background: var(--white); color: var(--text); outline: none; transition: border .15s; }
+  input[type=text]:focus, input[type=date]:focus { border-color: var(--blue); box-shadow: 0 0 0 2px rgba(21,96,130,.15); }
+
+  /* ── Buttons ── */
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: var(--radius); border: none; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; transition: background .15s, transform .1s; white-space: nowrap; }
+  .btn:active { transform: scale(.97); }
+  .btn-navy  { background: var(--navy);  color: #fff; }  .btn-navy:hover  { background: var(--navy2); }
+  .btn-blue  { background: var(--blue);  color: #fff; }  .btn-blue:hover  { background: var(--blue2); }
+  .btn-green { background: var(--green); color: #fff; }  .btn-green:hover { background: var(--green2); }
+  .btn-red   { background: var(--red);   color: #fff; }  .btn-red:hover   { background: #A02020; }
+  .btn-ghost { background: transparent; color: var(--navy); border: 1.5px solid var(--border); } .btn-ghost:hover { background: var(--bg2); }
+  .btn-lg { padding: 11px 26px; font-size: 14px; }
+  .btn-sm { padding: 5px 11px; font-size: 12px; }
+
+  /* ── Process button row ── */
+  .process-row { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+
+  /* ── Log ── */
+  .log-wrap { background: #0A1929; border-radius: var(--radius); padding: 12px 14px; min-height: 180px; max-height: 280px; overflow-y: auto; font-family: 'Cascadia Code', 'Consolas', monospace; font-size: 12px; color: #4FC3F7; }
+  .log-line { line-height: 1.6; }
+  .log-line.ok   { color: #69F0AE; }
+  .log-line.warn { color: #FFD54F; }
+  .log-line.err  { color: #FF5252; }
+  .log-line.sep  { color: #546E7A; }
+  .log-line.sum  { color: #E0E0E0; }
+
+  /* ── Prices table ── */
+  .tbl-wrap { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th { background: var(--navy); color: #fff; padding: 10px 12px; text-align: left; font-weight: 600; font-size: 12px; white-space: nowrap; }
+  thead th.center { text-align: center; }
+  tbody tr:nth-child(even) { background: var(--bg2); }
+  tbody tr:hover { background: #D8EAD8; }
+  tbody td { padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tbody td.center { text-align: center; }
+  tbody td.code { font-family: monospace; font-size: 12px; color: var(--blue); }
+  tbody td.price-cell, tbody td.moq-cell { text-align: center; }
+
+  /* ── Inline editable cell ── */
+  .editable { cursor: pointer; border-radius: 3px; padding: 3px 6px; display: inline-block; min-width: 60px; text-align: center; transition: background .12s; }
+  .editable:hover { background: #C8E6FA; }
+  .editable.editing { outline: 2px solid var(--orange); background: #FFF8E1; }
+  .inline-input { border: none; outline: none; background: transparent; font-size: 13px; font-family: inherit; text-align: center; width: 100%; }
+
+  /* ── Search bar ── */
+  .search-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .search-row input { width: 280px; }
+  .search-row .count { font-size: 12px; color: var(--muted); }
+
+  /* ── Toolbar ── */
+  .toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .toolbar-spacer { flex: 1; }
+
+  /* ── Result preview ── */
+  .result-table { font-size: 12px; }
+  .result-table th { background: var(--green); }
+
+  /* ── Badges ── */
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 11px; font-weight: 700; }
+  .badge-green { background: #C8F0C8; color: var(--green); }
+  .badge-warn  { background: #FFF3CD; color: var(--warn); }
+  .badge-blue  { background: #D4EAF7; color: var(--blue); }
+
+  /* ── Divider ── */
+  hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #B0C0B0; border-radius: 3px; }
+
+  /* ── Modal ── */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 100; display: flex; align-items: center; justify-content: center; }
+  .modal { background: var(--white); border-radius: 10px; padding: 28px 32px; width: 420px; max-width: 95vw; box-shadow: 0 8px 32px rgba(0,0,0,.25); }
+  .modal h3 { margin-bottom: 18px; font-size: 16px; color: var(--navy); }
+  .modal-row { margin-bottom: 14px; }
+  .modal-row label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
+  .modal-row input { width: 100%; }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<!-- Top Bar -->
+<div class="topbar">
+  <div>
+    <div class="topbar-logo">B2B Order Processor</div>
+    <div class="topbar-sub">CRM Administration Tool</div>
+  </div>
+  <div class="topbar-spacer"></div>
+</div>
+
+<!-- Tab Nav -->
+<div class="tabnav">
+  <div class="tab active" onclick="showTab('tab-process')">📂 Process Orders</div>
+  <div class="tab" onclick="showTab('tab-prices')">💰 Manage Prices & Items</div>
+</div>
+
+<!-- Panels -->
+<div class="panels">
+
+  <!-- ══ PROCESS ORDERS ══════════════════════════════════════════════════════ -->
+  <div class="panel active" id="tab-process">
+
+    <div class="infobox">
+      <b>How it works:</b> Export your Microsoft Forms responses as Excel (.xlsx) → Browse to select it → Click Process &amp; Export.<br>
+      The output matches the standard B2B format exactly: <b>Date at top → each customer block with item code, product name, quantity, unit price, net amount → grand total.</b><br>
+      Adjust item prices and codes any time in the <b>Manage Prices &amp; Items</b> tab — no re-upload needed.
+    </div>
+
+    <div class="card">
+      <div class="card-title">Import &amp; Export Settings</div>
+
+      <div class="form-row">
+        <span class="form-label">Forms Export File</span>
+        <span class="form-value" id="file-label">No file selected</span>
+        <button class="btn btn-blue" onclick="browseFile()">📁 Browse…</button>
+      </div>
+
+      <div class="form-row">
+        <span class="form-label">Report Date</span>
+        <input type="text" id="report-date" placeholder="DD/MM/YYYY" style="width:140px">
+      </div>
+    </div>
+
+    <div class="process-row">
+      <button class="btn btn-green btn-lg" onclick="processOrders()">⚡ Process &amp; Export B2B Order Sheet</button>
+      <span id="process-status" style="font-size:13px; color:var(--muted)"></span>
+    </div>
+
+    <!-- Results preview -->
+    <div class="card hidden" id="results-card">
+      <div class="card-title">Order Summary — Preview</div>
+      <div class="tbl-wrap">
+        <table class="result-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Company Name</th>
+              <th>Contact</th>
+              <th>Delivery Date</th>
+              <th class="center">Items</th>
+              <th class="center">Net Sales (KES)</th>
+            </tr>
+          </thead>
+          <tbody id="results-tbody"></tbody>
+        </table>
+      </div>
+      <div style="margin-top:10px; font-weight:700; font-size:14px; text-align:right; color:var(--navy)" id="grand-total-label"></div>
+    </div>
+
+    <!-- Log -->
+    <div class="card">
+      <div class="card-title">Processing Log</div>
+      <div class="log-wrap" id="log"></div>
+    </div>
+
+  </div>
+
+  <!-- ══ MANAGE PRICES & ITEMS ═══════════════════════════════════════════════ -->
+  <div class="panel" id="tab-prices">
+
+    <div class="toolbar">
+      <div class="search-row" style="margin:0">
+        <input type="text" id="search-input" placeholder="🔍  Filter products…" oninput="filterProducts()">
+        <span class="count" id="product-count"></span>
+      </div>
+      <div class="toolbar-spacer"></div>
+      <button class="btn btn-ghost btn-sm" onclick="uploadPriceList()">⬆ Upload Price List (Excel)</button>
+      <button class="btn btn-blue btn-sm" onclick="openAddModal()">＋ Add New Item</button>
+      <button class="btn btn-green btn-sm" onclick="savePrices()">💾 Save All</button>
+      <button class="btn btn-red btn-sm" onclick="resetPrices()">↺ Reset Defaults</button>
+    </div>
+
+    <div class="infobox" style="margin-bottom:14px;">
+      Click any <b>Price</b> or <b>MOQ</b> value to edit it directly in the table. Use <b>Upload Price List</b> to import from Excel (columns: Item Code, Product Name, Price, MOQ). Use <b>Add New Item</b> to add items manually. Changes are saved automatically.
+    </div>
+
+    <div class="tbl-wrap">
+      <table id="prices-table">
+        <thead>
+          <tr>
+            <th style="width:44px">#</th>
+            <th style="width:130px">Item Code</th>
+            <th>Product Name</th>
+            <th class="center" style="width:120px">Price (KES)</th>
+            <th class="center" style="width:80px">MOQ</th>
+            <th class="center" style="width:80px">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="prices-tbody"></tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+<!-- Add/Edit Item Modal -->
+<div class="modal-overlay hidden" id="item-modal">
+  <div class="modal">
+    <h3 id="modal-title">Add New Item</h3>
+    <div class="modal-row">
+      <label>Item Code</label>
+      <input type="text" id="modal-sku" placeholder="e.g. 10000051N">
+    </div>
+    <div class="modal-row">
+      <label>Product Name *</label>
+      <input type="text" id="modal-name" placeholder="e.g. EX-ALMOND CROISSANT 90GMS (PA)">
+    </div>
+    <div class="modal-row">
+      <label>Price (KES) *</label>
+      <input type="text" id="modal-price" placeholder="e.g. 107.76">
+    </div>
+    <div class="modal-row">
+      <label>MOQ (Minimum Order Quantity)</label>
+      <input type="text" id="modal-moq" placeholder="e.g. 5">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-green" onclick="saveModal()">Save Item</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const { ipcRenderer } = require('electron');
+
+// ── Default products ──────────────────────────────────────────────────────────
+const DEFAULT_PRODUCTS = [
+  { sku: '10000406N',  name: 'EX-ALMOND CROISSANT 90GMS (PA)',                     price: 107.76,  moq: 5  },
+  { sku: '10000417N',  name: 'EX-MINI PLAIN CROISSANT 50GMS (PA)',                  price: 38.79,   moq: 5  },
+  { sku: '10000407N',  name: 'EX-PLAIN CROISSANT 90GMS (PA)',                       price: 77.59,   moq: 5  },
+  { sku: '10000458N',  name: 'EX-CINNAMON ROLL 100GMS (PA)',                        price: 73.28,   moq: 5  },
+  { sku: '10000301N',  name: 'EX MINI ORANGE MUFFIN 80GMS (PA)',                    price: 42.65,   moq: 5  },
+  { sku: '10008913N',  name: 'EX-CHOC CHIP MUFFIN-80GMS',                           price: 47.41,   moq: 2  },
+  { sku: '10008463N',  name: 'EX-MINI LEMON POPPY MUFFINS',                         price: 45.27,   moq: 5  },
+  { sku: '10000298N',  name: 'EX-MINI CARROT MUFFIN 80GMS (PA)',                    price: 30.17,   moq: 5  },
+  { sku: '10000302N',  name: 'EX-MINI BANANA BREAD 60GMS (PA)',                     price: 17.24,   moq: 5  },
+  { sku: '10009285N',  name: 'EXS-BEEF SAMOSA MINI 45GMS',                          price: 47.41,   moq: 5  },
+  { sku: '10000323N',  name: 'EX-CHICKEN PIE 70GMS STREET SALE',                    price: 105.00,  moq: 5  },
+  { sku: '10000354N',  name: 'EXS-STEAK PIE 70GMS STREET SALE',                     price: 77.59,   moq: 5  },
+  { sku: '10000351N',  name: 'EX-SAUSAGE ROLL 70GMS-STREET SALE (PA)',              price: 94.83,   moq: 5  },
+  { sku: '10000366N',  name: 'EXS-BEEF SAUSAGE ROLL 120GMS (PA)',                   price: 108.62,  moq: 5  },
+  { sku: '10000328N',  name: 'EX-CHICKEN PIE 130GMS (PA)',                          price: 125.00,  moq: 5  },
+  { sku: '10000327N',  name: 'EX-STEAK PIE 130GMS (PA)',                            price: 187.07,  moq: 5  },
+  { sku: '10000405N',  name: 'EX-CHOCOLATE CROISSANTS 90GMS (PA)',                  price: 110.60,  moq: 5  },
+  { sku: '10009284N',  name: 'EXS-BEEF SAMOSA - LARGE 90GMS',                       price: 86.21,   moq: 5  },
+  { sku: '100102104N', name: 'EXS-CHICKEN SAMOSA - LARGE 90GMS',                    price: 90.00,   moq: 5  },
+  { sku: '100120103N', name: 'MINI CHICKEN SAMOSA B2B',                              price: 65.00,   moq: 5  },
+  { sku: '10009538N',  name: 'BEEF SAUSAGES',                                        price: 50.00,   moq: 5  },
+  { sku: '10009722N',  name: 'EXBURGER BUNS 70GMS (PA)',                             price: 33.90,   moq: 10 },
+  { sku: '10000088N',  name: 'EX-BURGER BUN 80GMS (PA)',                             price: 42.37,   moq: 10 },
+  { sku: '10000051N',  name: 'EX-MINI BAGUETTES 170GMS (PA)',                        price: 25.86,   moq: 10 },
+  { sku: '100101336N', name: 'KIDDY BRIOCHE BUN 50GMS',                              price: 25.86,   moq: 10 },
+  { sku: '10000291N',  name: 'BANANA BREAD 125GMS (PA)',                             price: 50.00,   moq: 5  },
+  { sku: '10000460N',  name: 'EX PLAIN CROISSANT 120GMS (PA)',                       price: 91.07,   moq: 5  },
+  { sku: '10000282N',  name: 'NEW CHOC-CHIP MUFFIN 160GMS (PA)',                     price: 94.70,   moq: 5  },
+  { sku: '',           name: 'Premium Arabica 500g - Medium Roast',                  price: 1100.00, moq: 12 },
+  { sku: '',           name: 'Premium Arabica 1kg Medium Roast',                     price: 2200.00, moq: 12 },
+  { sku: '',           name: 'Espresso Beans 500g Dark Roast',                       price: 1034.48, moq: 12 },
+  { sku: '',           name: 'Espresso Beans 1kg Dark Roast',                        price: 2241.38, moq: 12 },
+  { sku: '',           name: 'Decaf Arabica 500g',                                   price: 2586.00, moq: 6  },
+  { sku: '',           name: 'Gold Tea',                                             price: 251.00,  moq: 6  },
+  { sku: '',           name: 'Vanilla Syrup 750ml',                                  price: 1085.30, moq: 1  },
+  { sku: '',           name: 'Hazelnut Syrup 750ml',                                 price: 1085.30, moq: 1  },
+  { sku: '',           name: 'Coconut Syrup 750ml',                                  price: 1085.30, moq: 1  },
+  { sku: '',           name: 'Tofeenut Syrup 750ml',                                 price: 1085.30, moq: 1  },
+  { sku: '',           name: 'Caramel Syrup 750ml',                                  price: 1085.30, moq: 1  },
+];
+
+let products = DEFAULT_PRODUCTS.map(p => ({...p}));
+let selectedFilePath = null;
+let editModalIdx = null;
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+async function init() {
+  // Set today's date
+  const today = new Date();
+  const dd = String(today.getDate()).padStart(2,'0');
+  const mm = String(today.getMonth()+1).padStart(2,'0');
+  const yyyy = today.getFullYear();
+  document.getElementById('report-date').value = `${dd}/${mm}/${yyyy}`;
+
+  // Load saved prices
+  const saved = await ipcRenderer.invoke('load-prices');
+  if (saved && saved.length > 0) products = saved;
+  renderPrices();
+  log('Ready. Select a Microsoft Forms export file to begin.', 'ok');
+}
+
+// ── Tab switching ─────────────────────────────────────────────────────────────
+function showTab(id) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  const tabs = document.querySelectorAll('.tab');
+  if (id === 'tab-process') tabs[0].classList.add('active');
+  else tabs[1].classList.add('active');
+}
+
+// ── Log ───────────────────────────────────────────────────────────────────────
+function log(msg, cls='') {
+  const wrap = document.getElementById('log');
+  const now = new Date();
+  const ts = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+  const div = document.createElement('div');
+  div.className = `log-line ${cls}`;
+  div.textContent = `[${ts}]  ${msg}`;
+  wrap.appendChild(div);
+  wrap.scrollTop = wrap.scrollHeight;
+}
+
+// ── Browse file ───────────────────────────────────────────────────────────────
+async function browseFile() {
+  const fp = await ipcRenderer.invoke('browse-file');
+  if (fp) {
+    selectedFilePath = fp;
+    const name = fp.split(/[\\/]/).pop();
+    document.getElementById('file-label').textContent = name;
+    log(`File selected: ${name}`, 'ok');
+  }
+}
+
+// ── Process orders ────────────────────────────────────────────────────────────
+async function processOrders() {
+  if (!selectedFilePath) {
+    alert('Please select a Microsoft Forms export file first.');
+    return;
+  }
+  const reportDate = document.getElementById('report-date').value.trim();
+  if (!reportDate) { alert('Please enter a report date.'); return; }
+
+  log('Reading forms export…');
+  let orders;
+  try {
+    orders = await ipcRenderer.invoke('parse-forms', selectedFilePath, products);
+  } catch(e) {
+    log('Error reading file: ' + e.message, 'err'); return;
+  }
+
+  const active  = orders.filter(o => o.items.length > 0);
+  const skipped = orders.filter(o => o.items.length === 0);
+  log(`Found ${orders.length} responses → ${active.length} with orders, ${skipped.length} skipped.`);
+  skipped.forEach(o => log(`  ⚠ No items ordered: ${o.company}`, 'warn'));
+
+  if (active.length === 0) { log('No orders to export.', 'warn'); return; }
+
+  log('Generating B2B order sheet…');
+  const outPath = await ipcRenderer.invoke('export-excel', active, reportDate);
+  if (!outPath) { log('Export cancelled.', 'warn'); return; }
+
+  log(`✓ Saved → ${outPath.split(/[\\/]/).pop()}`, 'ok');
+  log('─'.repeat(62), 'sep');
+  log(`  ${'COMPANY NAME'.padEnd(38)}  ${'ITEMS'.padStart(5)}   ${'NET SALES (KES)'.padStart(15)}`, 'sum');
+  log('─'.repeat(62), 'sep');
+  let grand = 0;
+  active.forEach(o => {
+    const qty = o.items.reduce((s,i) => s+i.qty, 0);
+    log(`  ${o.company.substring(0,38).padEnd(38)}  ${String(qty).padStart(5)}   KES ${o.net_sales.toLocaleString('en-KE',{minimumFractionDigits:2})}`, 'sum');
+    grand += o.net_sales;
+  });
+  log('─'.repeat(62), 'sep');
+  log(`  ${'GRAND TOTAL'.padEnd(44)}   KES ${grand.toLocaleString('en-KE',{minimumFractionDigits:2})}`, 'ok');
+  log('─'.repeat(62), 'sep');
+
+  // Show preview table
+  const tbody = document.getElementById('results-tbody');
+  tbody.innerHTML = '';
+  active.forEach((o, i) => {
+    const qty = o.items.reduce((s,it)=>s+it.qty,0);
+    tbody.innerHTML += `
+      <tr>
+        <td>${i+1}</td>
+        <td><b>${o.company}</b></td>
+        <td>${o.contact}</td>
+        <td>${o.delivery_date}</td>
+        <td class="center">${qty}</td>
+        <td class="center"><b>KES ${o.net_sales.toLocaleString('en-KE',{minimumFractionDigits:2})}</b></td>
+      </tr>`;
+  });
+  document.getElementById('grand-total-label').textContent =
+    `Grand Total: KES ${grand.toLocaleString('en-KE',{minimumFractionDigits:2})}`;
+  document.getElementById('results-card').classList.remove('hidden');
+}
+
+// ── Render prices table ───────────────────────────────────────────────────────
+function renderPrices(filter='') {
+  const tbody = document.getElementById('prices-tbody');
+  tbody.innerHTML = '';
+  let shown = 0;
+  products.forEach((p, i) => {
+    if (filter && !p.name.toLowerCase().includes(filter) && !p.sku.toLowerCase().includes(filter)) return;
+    shown++;
+    tbody.innerHTML += `
+      <tr id="row-${i}">
+        <td style="color:var(--muted);text-align:center">${i+1}</td>
+        <td class="code">${p.sku || '<span style="color:#bbb">—</span>'}</td>
+        <td>${escHtml(p.name)}</td>
+        <td class="price-cell">
+          <span class="editable" onclick="startEdit(${i},'price',this)">${p.price.toFixed(2)}</span>
+        </td>
+        <td class="moq-cell">
+          <span class="editable" onclick="startEdit(${i},'moq',this)">${p.moq}</span>
+        </td>
+        <td class="center">
+          <button class="btn btn-ghost btn-sm" onclick="openEditModal(${i})" title="Edit full details">✏</button>
+          <button class="btn btn-red btn-sm" onclick="deleteItem(${i})" title="Delete">✕</button>
+        </td>
+      </tr>`;
+  });
+  document.getElementById('product-count').textContent = `${shown} of ${products.length} items`;
+}
+
+function filterProducts() {
+  renderPrices(document.getElementById('search-input').value.toLowerCase().trim());
+}
+
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ── Inline price/MOQ editing ──────────────────────────────────────────────────
+let _activeEdit = null;
+
+function startEdit(idx, field, el) {
+  if (_activeEdit) commitEdit();
+  el.classList.add('editing');
+  const cur = field === 'price' ? products[idx].price.toFixed(2) : String(products[idx].moq);
+  el.innerHTML = `<input class="inline-input" type="text" value="${cur}" id="ie-input">`;
+  const inp = document.getElementById('ie-input');
+  inp.focus(); inp.select();
+  _activeEdit = { idx, field, el };
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); commitEdit(); }
+    if (e.key === 'Escape') { cancelEdit(); }
+  });
+  inp.addEventListener('blur', () => setTimeout(commitEdit, 80));
+}
+
+function commitEdit() {
+  if (!_activeEdit) return;
+  const { idx, field, el } = _activeEdit;
+  _activeEdit = null;
+  const inp = el.querySelector('input');
+  if (!inp) return;
+  const val = inp.value.trim();
+  if (field === 'price') {
+    const n = parseFloat(val);
+    if (isNaN(n) || n < 0) { cancelEdit(); return; }
+    products[idx].price = Math.round(n * 100) / 100;
+    el.textContent = products[idx].price.toFixed(2);
+  } else {
+    const n = parseInt(val);
+    if (isNaN(n) || n < 1) { cancelEdit(); return; }
+    products[idx].moq = n;
+    el.textContent = n;
+  }
+  el.classList.remove('editing');
+  savePricesSilent();
+}
+
+function cancelEdit() {
+  if (!_activeEdit) return;
+  const { idx, field, el } = _activeEdit;
+  _activeEdit = null;
+  el.classList.remove('editing');
+  el.textContent = field === 'price' ? products[idx].price.toFixed(2) : String(products[idx].moq);
+}
+
+// ── Add / Edit Modal ──────────────────────────────────────────────────────────
+function openAddModal() {
+  editModalIdx = null;
+  document.getElementById('modal-title').textContent = 'Add New Item';
+  document.getElementById('modal-sku').value   = '';
+  document.getElementById('modal-name').value  = '';
+  document.getElementById('modal-price').value = '';
+  document.getElementById('modal-moq').value   = '5';
+  document.getElementById('item-modal').classList.remove('hidden');
+  document.getElementById('modal-name').focus();
+}
+
+function openEditModal(idx) {
+  editModalIdx = idx;
+  const p = products[idx];
+  document.getElementById('modal-title').textContent = 'Edit Item';
+  document.getElementById('modal-sku').value   = p.sku;
+  document.getElementById('modal-name').value  = p.name;
+  document.getElementById('modal-price').value = p.price.toFixed(2);
+  document.getElementById('modal-moq').value   = p.moq;
+  document.getElementById('item-modal').classList.remove('hidden');
+  document.getElementById('modal-name').focus();
+}
+
+function closeModal() { document.getElementById('item-modal').classList.add('hidden'); }
+
+function saveModal() {
+  const sku   = document.getElementById('modal-sku').value.trim();
+  const name  = document.getElementById('modal-name').value.trim();
+  const price = parseFloat(document.getElementById('modal-price').value);
+  const moq   = parseInt(document.getElementById('modal-moq').value) || 1;
+
+  if (!name) { alert('Product name is required.'); return; }
+  if (isNaN(price) || price <= 0) { alert('Please enter a valid price.'); return; }
+
+  if (editModalIdx === null) {
+    products.push({ sku, name, price, moq });
+  } else {
+    products[editModalIdx] = { sku, name, price, moq };
+  }
+  closeModal();
+  renderPrices(document.getElementById('search-input').value.toLowerCase().trim());
+  savePricesSilent();
+}
+
+function deleteItem(idx) {
+  if (!confirm(`Delete "${products[idx].name}"?\nThis cannot be undone.`)) return;
+  products.splice(idx, 1);
+  renderPrices(document.getElementById('search-input').value.toLowerCase().trim());
+  savePricesSilent();
+}
+
+// ── Upload price list ─────────────────────────────────────────────────────────
+async function uploadPriceList() {
+  const fp = await ipcRenderer.invoke('browse-price-list');
+  if (!fp) return;
+  try {
+    const imported = await ipcRenderer.invoke('parse-price-list', fp);
+    if (!imported || imported.length === 0) {
+      alert('No products found in that file.\nMake sure it has columns: Item Code, Product Name, Price, MOQ.');
+      return;
+    }
+    if (confirm(`Found ${imported.length} products in the file.\n\nReplace all current items? (Cancel to merge/add instead)`)) {
+      products = imported;
+    } else {
+      // Merge: add new, update existing by name
+      const existing = new Map(products.map(p => [p.name.toLowerCase(), p]));
+      imported.forEach(imp => {
+        const key = imp.name.toLowerCase();
+        if (existing.has(key)) Object.assign(existing.get(key), imp);
+        else products.push(imp);
+      });
+    }
+    renderPrices();
+    savePricesSilent();
+    alert(`✓ ${imported.length} products imported successfully.`);
+  } catch(e) {
+    alert('Error reading price list: ' + e.message);
+  }
+}
+
+// ── Save / Reset ──────────────────────────────────────────────────────────────
+async function savePrices() {
+  await ipcRenderer.invoke('save-prices', products);
+  log('✓ Prices saved.', 'ok');
+  // brief visual feedback
+  const btn = event.target;
+  btn.textContent = '✓ Saved!';
+  setTimeout(() => btn.textContent = '💾 Save All', 1500);
+}
+
+async function savePricesSilent() {
+  await ipcRenderer.invoke('save-prices', products);
+}
+
+function resetPrices() {
+  if (!confirm('Reset ALL items and prices back to original defaults?\nThis cannot be undone.')) return;
+  products = DEFAULT_PRODUCTS.map(p => ({...p}));
+  renderPrices();
+  savePricesSilent();
+}
+
+// ── Start ─────────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
